@@ -9,12 +9,12 @@ simple CLI tool that fetches word definitions and stores them locally in `wordba
 
 ## Usage
 ```bash
-wordup
+$ wordup
 ```
 Displays the saved word definitions in manpage format 
 
 ```bash
-wordup [WORD]
+$ wordup [WORD]
 ```
 Fetches the definition for the specified `WORD`, prints it to the console, and appends it to `wordbank.man`
 
