@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
-	// "os/exec"
+	"os/exec"
 	"encoding/json"
 	"io"
 	"log"
@@ -66,18 +66,22 @@ func main() {
 		for i, meaning := range words[0].Meanings {
 			fmt.Printf("(%d) %v\n",i+1 , meaning.Definitions[0].Definition)
 		}
+
+		// Add word to word bank 
 	} else if len(os.Args) == 1 {
-		fmt.Println("attempting to show word bank...")
-	// 	// path, err := exec.LookPath("open-wordbank")
-	// 	// if err != nil {
-	// 	// log.Fatal("error when finding script to open wordbank: %s", err)
-	// 	// }
-	// 	// fmt.Printf("script is available at %s\n", path)
-	// 	cmd := exec.Command("/bin/sh", "open-wordbank.sh")
-	// 	cmd.Stdout = os.Stdout
-	// 	cmd.Stdin = os.Stdin
-	// 	cmd.Stderr = os.Stderr
-	// 	fmt.Println("printed out wordbank")
+		// log.Printf("INFO: showing word bank")
+
+		cmd := exec.Command("./open-wordbank.sh")
+
+		// Attach current terminal's input/output to the command 
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		if err := cmd.Run(); err != nil {
+			log.Fatal(err)
+		}
+		// fmt.Println("printed out wordbank")
 	} else {
 		fmt.Println("Invalid arguments provided")
 	}

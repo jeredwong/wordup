@@ -1,0 +1,7 @@
+.TH WORDBANK
+.SH NAME
+test \- this it the definition of the word "test".
+.SH DESCRIPTION
+This is a longer description of the word "test".
+.SH NAME2
+.SH DESCRIPTION
