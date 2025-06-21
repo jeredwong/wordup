@@ -12,6 +12,7 @@ import (
 
 func main() {
 	const BasePath = "https://api.dictionaryapi.dev/api/v2/entries/en/"
+	const WordBankFile = "wordbank.man"
 
 	// Structs 
 	type Definition struct {
@@ -29,6 +30,7 @@ func main() {
 
 	// Retrieve word definition
 	if len(os.Args) == 2 {
+
 		word := os.Args[1]
 
 		// log.Printf("INFO: making GET request for word \"%s\"\n", word)
@@ -55,8 +57,7 @@ func main() {
 
 		// Unmarshalling response
 		var words []Word
-		err = json.Unmarshal(body, &words)
-		if err != nil {
+		if err := json.Unmarshal(body, &words); err != nil {
 			log.Fatalf("Error unmarshalling response body: %v", err)
 		}
 
@@ -64,11 +65,33 @@ func main() {
 
 		fmt.Println("definitions:")
 		for i, meaning := range words[0].Meanings {
-			fmt.Printf("(%d) %v\n",i+1 , meaning.Definitions[0].Definition)
+			definition := meaning.Definitions[0].Definition
+			fmt.Printf("(%d) %v\n",i+1 , definition)
 		}
 
 		// Add word to word bank 
+		f, err := os.OpenFile(WordBankFile, os.O_APPEND|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
+
+		if _, err := fmt.Fprintf(f, ".SH %s\n", word); err != nil {
+			f.Close() // ignore error; Write error takes precedence
+			log.Fatal(err)
+		}
+
+		for i, meaning := range words[0].Meanings {
+			definition := meaning.Definitions[0].Definition
+			s := fmt.Sprintf("(%d) %v\n",i+1 , definition)
+			if _, err := fmt.Fprintf(f, "%s\n", s); err != nil {
+				f.Close() 
+				log.Fatal(err)
+			}
+		}
+
 	} else if len(os.Args) == 1 {
+
 		// log.Printf("INFO: showing word bank")
 
 		cmd := exec.Command("./open-wordbank.sh")
