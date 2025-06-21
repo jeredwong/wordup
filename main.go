@@ -1,18 +1,29 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"os/exec"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
 )
 
 func main() {
+	
+	// Constants and paths 
 	const BasePath = "https://api.dictionaryapi.dev/api/v2/entries/en/"
 	const WordBankFile = "wordbank.man"
+	const WordBankScript = "open-wordbank.sh"
+
+	exePath, _ := os.Executable()
+	exeDir := filepath.Dir(exePath)
+
+	wordBankFilePath := filepath.Join(exeDir, WordBankFile)
+	wordBankScriptPath := filepath.Join(exeDir, WordBankScript)
 
 	// Structs 
 	type Definition struct {
@@ -28,8 +39,35 @@ func main() {
 		Meanings []Meaning
 	}
 
-	// Retrieve word definition
-	if len(os.Args) == 2 {
+	// Initialise wordbank.man if does not exist 
+	if _, err := os.Stat(wordBankFilePath); errors.Is(err, os.ErrNotExist) {
+		f, err := os.OpenFile(wordBankFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatalf("Error opening file: %v", err)
+		}
+		defer f.Close()
+
+		if _, err := fmt.Fprint(f, ".TH WORDBANK\n"); err != nil {
+			f.Close() // ignore error; Write error takes precedence
+			log.Fatalf("Error appending to file: %v", err)
+		}
+	}
+
+	// Initialise open-wordbank.sh if does not exist 
+	if _, err := os.Stat(wordBankScriptPath); errors.Is(err, os.ErrNotExist) {
+		f, err := os.OpenFile(wordBankScriptPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0777)
+		if err != nil {
+			log.Fatalf("Error opening file: %v", err)
+		}
+		defer f.Close()
+
+		if _, err := fmt.Fprintf(f, "#!/bin/sh\nWORDBANK=%s\ngroff -man -Tascii $WORDBANK | less\n", wordBankFilePath); err != nil {
+			f.Close() // ignore error; Write error takes precedence
+			log.Fatalf("Error appending to file: %v", err)
+		}
+	}
+
+	if len(os.Args) == 2 { // Retrieve word definition
 
 		word := os.Args[1]
 
@@ -70,15 +108,15 @@ func main() {
 		}
 
 		// Add word to word bank 
-		f, err := os.OpenFile(WordBankFile, os.O_APPEND|os.O_WRONLY, 0644)
+		f, err := os.OpenFile(wordBankFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Error opening file: %v", err)
 		}
 		defer f.Close()
 
 		if _, err := fmt.Fprintf(f, ".SH %s\n", word); err != nil {
 			f.Close() // ignore error; Write error takes precedence
-			log.Fatal(err)
+			log.Fatalf("Error appending to file: %v", err)
 		}
 
 		for i, meaning := range words[0].Meanings {
@@ -90,11 +128,9 @@ func main() {
 			}
 		}
 
-	} else if len(os.Args) == 1 {
+	} else if len(os.Args) == 1 { // Display wordbank
 
-		// log.Printf("INFO: showing word bank")
-
-		cmd := exec.Command("./open-wordbank.sh")
+		cmd := exec.Command(wordBankScriptPath)
 
 		// Attach current terminal's input/output to the command 
 		cmd.Stdin = os.Stdin
@@ -104,7 +140,7 @@ func main() {
 		if err := cmd.Run(); err != nil {
 			log.Fatal(err)
 		}
-		// fmt.Println("printed out wordbank")
+
 	} else {
 		fmt.Println("Invalid arguments provided")
 	}
